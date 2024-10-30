@@ -1,0 +1,84 @@
+# CloudFormation Configuration
+resource "aws_cloudformation_stack" "my_app" {
+  name          = "my-app-stack"
+  template_body = <<EOF
+Resources:
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow HTTP traffic
+      VpcId: vpc-03d80d9498c782450  # Replace with your VPC ID
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+          
+  AppLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: app-lb
+      Subnets:
+        - <subnet-0457ee46e0e354f0b>  # Replace with your Subnet ID
+        - <subnet-02f307e8020091259>  # Replace with your Subnet ID
+      SecurityGroups:
+        - !Ref ALBSecurityGroup
+
+  AppTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: app-tg
+      Port: 80
+      Protocol: HTTP
+      VpcId: vpc-03d80d9498c782450  # Replace with your VPC ID
+      HealthCheckPath: /
+      HealthCheckIntervalSeconds: 30
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 2
+
+  AppListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref AppLoadBalancer
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref AppTargetGroup
+
+  AppLaunchConfiguration:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      ImageId: ami-06b21ccaeff8cd686  # Replace with your AMI ID
+      InstanceType: t2.micro
+
+  AppAutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      LaunchConfigurationName: !Ref AppLaunchConfiguration
+      MinSize: '1'
+      MaxSize: '5'
+      DesiredCapacity: '2'
+      VPCZoneIdentifier:
+        - subnet-0457ee46e0e354f0b  # Replace with your Subnet ID
+        - subnet-02f307e8020091259  # Replace with your Subnet ID
+      HealthCheckType: ELB
+      HealthCheckGracePeriod: 300
+
+  AppScalingPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AutoScalingGroupName: !Ref AppAutoScalingGroup
+      PolicyType: TargetTrackingScaling
+      TargetTrackingConfiguration:
+        TargetValue: 50.0
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ASGAverageCPUUtilization
+        ScaleInCooldown: 60
+        ScaleOutCooldown: 60
+EOF
+}
+
+output "load_balancer_dns_cf" {
+  value = !GetAtt AppLoadBalancer.DNSName
+}
