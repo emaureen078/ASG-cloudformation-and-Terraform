@@ -1,9 +1,9 @@
-# ASG-cloudformation-and-Terraform# ASG with ALB Infrastructure Setup
+# ASG-cloudformation-and-Terraform
+# ASG with ALB Infrastructure Setup
 
 This project demonstrates how to create an Auto Scaling Group (ASG) with an Application Load Balancer (ALB) using Infrastructure as Code (IaC) with both **Terraform** and **CloudFormation**. Each configuration deploys a simple web application that displays "Hello, World!" and scales based on load requirements.
 
 ## Project Structure
-
 
 ## Prerequisites
 
